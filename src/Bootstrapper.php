@@ -1,52 +1,21 @@
 <?php
-
 namespace Repack\Bladestring;
 
-if (class_exists('\Illuminate\Support\ViewServiceProvider')) {
-    class EngineResolver extends \Illuminate\View\Engines\EngineResolver
-    {}
-    class FileViewFinder extends \Illuminate\View\FileViewFinder
-    {}
-    class ServiceProvider extends \Illuminate\Support\ViewServiceProvider
-    {}
-} else {
-    class EngineResolver extends \Repack\View\Engines\EngineResolver
-    {}
-    class FileViewFinder extends \Repack\View\FileViewFinder
-    {}
-    class ServiceProvider
-    {}
-}
+use ArrayAccess;
 
-class Bootstrapper extends ServiceProvider
+class Bootstrapper
 {
     /**
      * Register the service provider.
      *
      * @return void
      */
-    public function register()
+    public static function bootstrap(ArrayAccess $ioc)
     {
-        // load the alias (handled by the Laravel autoloader)
-        //$this->app->alias('StringBlade', __NAMESPACE__.'\Facades\StringBlade');
-
-        $this->registerEngineResolver($ioc);
-
-        Bootstrapper::bootstrap($this->app);
-    }
-
-    /**
-     * Register the service provider.
-     *
-     * @return void
-     */
-    public static function bootstrap($ioc)
-    {
-        // load the alias (handled by the Laravel autoloader)
-        //$ioc->alias('StringBlade',  __NAMESPACE__.'\Facades\StringBlade');
-
         static::bindEngineResolver($ioc);
+
         static::bindViewFinder($ioc);
+
         static::bindFactory($ioc);
     }
 
@@ -55,17 +24,17 @@ class Bootstrapper extends ServiceProvider
      *
      * @return void
      */
-    public static function bindFactory($ioc)
+    public static function bindFactory(ArrayAccess $ioc)
     {
-        $ioc->singleton('view.string', function () use ($ioc) {
+        $ioc->offsetSet('view.string', function () use ($ioc) {
             // Next we need to grab the engine resolver instance that will be used by the
             // environment. The resolver will be used by an environment to get each of
             // the various engine implementations such as plain PHP or Blade engine.
 
-            $finder = $ioc->bound('view') ? $ioc['view']->getFinder() : $ioc['view.string.finder'];
+            $finder = $ioc->offsetExists('view') ? $ioc['view']->getFinder() : $ioc['view.string.finder'];
 
             $factory = new Factory(
-                $ioc['view.engine.resolver'], $finder, $ioc->bound('events') ? $ioc['events'] : null
+                $ioc['view.engine.resolver'], $finder, $ioc->offsetExists('events') ? $ioc['events'] : null
             );
 
             // We will also set the container instance on this view environment since the
@@ -84,7 +53,7 @@ class Bootstrapper extends ServiceProvider
      *
      * @return void
      */
-    public static function bindViewFinder($ioc)
+    public static function bindViewFinder(ArrayAccess $ioc)
     {
         // since view.find should be registered, lets get the paths and hints - in case they have changed
         $oldFinder = array();
@@ -95,11 +64,10 @@ class Bootstrapper extends ServiceProvider
         }
 
         // recreate the view.finder
-        $ioc->bind('view.string.finder', function () use ($oldFinder, $ioc) {
-
+        $ioc->offsetSet('view.string.finder', function () use ($oldFinder, $ioc) {
             $paths = (isset($oldFinder['paths']))
-            ? array_unique(array_merge($ioc['config']['view.paths'], $oldFinder['paths']), SORT_REGULAR)
-            : $ioc['config']['view.paths'];
+                ? array_unique(array_merge($ioc['config']['view.paths'], $oldFinder['paths']), SORT_REGULAR)
+                : $ioc['config']['view.paths'];
 
             if (is_subclass_of(__NAMESPACE__ . '\FileViewFinder', '\Illuminate\View\FileViewFinder')) {
                 $viewFinder = new FileViewFinder($ioc['files'], $paths);
@@ -122,16 +90,14 @@ class Bootstrapper extends ServiceProvider
      *
      * @return void
      */
-    public static function bindEngineResolver($ioc)
+    public static function bindEngineResolver(ArrayAccess $ioc)
     {
-        if ($ioc->bound($resolver = 'view.engine.resolver')) {
-
+        if ($ioc->offsetExists($resolver = 'view.engine.resolver')) {
             $bindCallback = function ($engineResolver) use ($ioc) {
                 // Next, we will register the various view engines with the resolver so that the
                 // environment will resolve the engines needed for various views based on the
                 // extension of view file. We call a method for each of the view's engines.
                 foreach (array('file', 'php', 'blade', 'stringblade') as $engine) {
-
                     $method = 'bind' . ucfirst($engine) . 'Engine';
 
                     if (method_exists(__NAMESPACE__ . '\Bootstrapper', $method)) {
@@ -150,12 +116,12 @@ class Bootstrapper extends ServiceProvider
      * @param  \Engines\EngineResolver  $resolver
      * @return void
      */
-    public static function bindStringBladeEngine($resolver, $ioc)
+    public static function bindStringBladeEngine($resolver, ArrayAccess $ioc)
     {
         // The Compiler engine requires an instance of the CompilerInterface, which in
         // this case will be the Blade compiler, so we'll first create the compiler
         // instance to pass into the engine so it can compile the views properly.
-        $ioc->singleton('string.blade.compiler', function () use ($ioc) {
+        $ioc->offsetSet('string.blade.compiler', function () use ($ioc) {
             return new CompilerString($ioc['config']['view.compiled']);
         });
 

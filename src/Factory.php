@@ -1,16 +1,15 @@
 <?php
-
 namespace Repack\Bladestring;
 
 if (class_exists('\Illuminate\View\Factory')) {
-    class FactoryParent extends \Illuminate\View\Factory
+    class BaseFactory extends \Illuminate\View\Factory
     {}
 } else {
-    class FactoryParent extends \Repack\View\Factory
+    class BaseFactory extends \Repack\View\Factory
     {}
 }
 
-class Factory extends FactoryParent
+class Factory extends BaseFactory
 {
     /**
      * The extension to engine bindings.
