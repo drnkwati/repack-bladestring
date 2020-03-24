@@ -1,9 +1,9 @@
 <?php
 namespace Repack\Bladestring;
 
-use Illuminate\Support\ServiceProvider;
+use Illuminate\View\ViewServiceProvider;
 
-class BladestringServiceProvider extends ServiceProvider
+class BladestringServiceProvider extends ViewServiceProvider
 {
     /**
      * Register the service provider.
